@@ -1,11 +1,13 @@
 package game;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
@@ -20,6 +22,9 @@ import java.util.Scanner;
 public class main {
     
     static Scanner sc = new Scanner(System.in);
+    private static final int WORD_SIZE = 50; // Tamaño de la palabra en bytes
+    private static final int SCORE_SIZE = 8; // Tamaño del entero de la puntuación
+    private static final int RECORD_SIZE = WORD_SIZE + SCORE_SIZE; // Tamaño total del registro
 
     /**
      * Método principal que inicia la aplicación.
@@ -37,8 +42,6 @@ public class main {
             // Mostrar el menú
             System.out.println("1. Login");
             System.out.println("2. Register");
-            System.out.println("3. See Users");
-            System.out.println("4. Delete user");
             System.out.print("Choose a option: ");
             int option = sc.nextInt();
             sc.nextLine(); // Consumir nueva línea
@@ -49,12 +52,6 @@ public class main {
                     break;
                 case 2: 
                     registerUser(); // Llama al método para registrar un nuevo usuario
-                    break;
-                case 3: 
-                    mostrarUsuarios(); // Muestra la lista de usuarios registrados
-                    break;
-                case 4: 
-                    eliminarUsuario(); // Llama al método para eliminar un usuario
                     break;
                 default: 
                     System.err.println("Invalid option");
@@ -67,7 +64,7 @@ public class main {
      * Método que permite a un usuario iniciar sesión.
      * Solicita el nombre de usuario y la contraseña.
      */
-    private static void loginUser() {
+    public static void loginUser() {
         System.out.println("Username: ");
         String user = sc.next();
         System.out.println("Password: ");
@@ -82,7 +79,11 @@ public class main {
                 if (u.getUser().equals(user)) { // Verifica el usuario
                     if (u.getPassword().equals(psw)) { // Verifica la contraseña
                         System.out.println("Login exitoso!");
-                        mostrarMenuUsuario(u); // Muestra el menú del usuario
+                        if (u.isAdmin()) {
+                            mostrarMenuAdmin(u); // Si es admin, muestra el menú del administrador
+                        } else {
+                            mostrarMenuUsuario(u); // Muestra el menú del usuario
+                        }
                     } else {
                         System.out.println("Contraseña incorrecta."); 
                     }
@@ -96,7 +97,7 @@ public class main {
      * Método que permite registrar un nuevo usuario.
      * Solicita información del nuevo usuario y lo guarda.
      */
-    private static void registerUser() {
+    public static void registerUser() {
         System.out.println("Introduce tu nombre: ");
         String nom = sc.next();
         System.out.println("Introduce tu nombre de usuario: ");
@@ -118,7 +119,7 @@ public class main {
      *
      * @param user El objeto User que se va a guardar.
      */
-    private static void guardarUsuari(User user) {
+    public static void guardarUsuari(User user) {
         ArrayList<User> users = cargarUsuarios(); // Cargar usuarios existentes
         users.add(user); // Agrega el nuevo usuario a la lista
         try (ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream("users.dat"))) {
@@ -136,7 +137,7 @@ public class main {
      *
      * @return Lista de usuarios cargados.
      */
-    private static ArrayList<User> cargarUsuarios() {
+    public static ArrayList<User> cargarUsuarios() {
         ArrayList<User> users = new ArrayList<>();
         try (ObjectInputStream reader = new ObjectInputStream(new FileInputStream("users.dat"))) {
             while (true) {
@@ -159,7 +160,7 @@ public class main {
      * @param username El nombre de usuario a verificar.
      * @return true si el usuario existe, false en caso contrario.
      */
-    private static boolean userExist(String username) {
+    public static boolean userExist(String username) {
         ArrayList<User> users = cargarUsuarios(); // Cargar usuarios existentes
         for (User user : users) {
             if (user.getUser().equals(username)) { // Compara el username
@@ -172,7 +173,7 @@ public class main {
     /**
      * Método que muestra todos los usuarios registrados.
      */
-    private static void mostrarUsuarios() {
+    public static void mostrarUsuarios() {
         ArrayList<User> users = cargarUsuarios(); // Cargar usuarios
         if (users.isEmpty()) {
             System.out.println("No hay usuarios registrados.");
@@ -185,67 +186,23 @@ public class main {
     }
 
     /**
-     * Método que permite eliminar un usuario del sistema.
-     */
-    private static void eliminarUsuario() {
-        System.out.println("Introduce el nombre de usuario que deseas eliminar: ");
-        String username = sc.nextLine();
-
-        ArrayList<User> users = cargarUsuarios(); // Cargar usuarios existentes
-        boolean found = false; // booleano para verificar si se encontró el usuario
-
-        // Iterar sobre la lista de usuarios
-        Iterator<User> iterator = users.iterator();
-        while (iterator.hasNext()) {
-            User user = iterator.next();
-            if (user.getUser().equals(username)) { // Verifica si el usuario coincide
-                iterator.remove(); // Eliminar el usuario
-                found = true;
-                break;
-            }
-        }
-
-        if (found) {
-            // Guardar la lista actualizada sin el usuario eliminado
-            try (ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream("users.dat"))) {
-                for (User u : users) {
-                    writer.writeObject(u); // Escribir todos los usuarios de nuevo
-                }
-                System.out.println("Usuario " + username + " eliminado correctamente!");
-            } catch (IOException ex) {
-                System.err.println(ex); 
-            }
-        } else {
-            System.out.println("Usuario no encontrado.");
-        }
-    }
-
-    /**
      * Método que muestra el menú específico para cada usuario.
      *
      * @param user El objeto User que representa al usuario.
      */
-    private static void mostrarMenuUsuario(User user) {
+    public static void mostrarMenuUsuario(User user) {
         while (true) {
-            System.out.println("1. Afegir paraules (només si l’usuari és admin)");
-            System.out.println("2. Jugar");
-            System.out.println("3. Logout");
+            System.out.println("1. Jugar");
+            System.out.println("2. Logout");
             System.out.print("Choose an option: ");
             int option = sc.nextInt();
             sc.nextLine();
 
             switch (option) {
                 case 1:
-                    if (user.isAdmin()) {
-                        afegirParaules(); // Permite al admin agregar palabras
-                    } else {
-                        System.err.println("No tienes permisos de administrador.");
-                    }
+                    jugar(user);
                     break;
                 case 2:
-                    jugar(); // Inicia el juego
-                    break;
-                case 3:
                     System.out.println("Logout exitoso!");
                     return; // Salir del menú del usuario y volver al menú principal
                 default:
@@ -255,31 +212,66 @@ public class main {
         }
     }
     
+    private static void mostrarMenuAdmin(User admin) {
+        while (true) {
+            System.out.println("1. Leer usuarios");
+            System.out.println("2. Leer palabras");
+            System.out.println("3. Editar palabras");
+            System.out.println("4. Jugar");
+            System.out.println("5. Logout");
+            System.out.print("Elige una opción: ");
+            int option = sc.nextInt();
+            sc.nextLine(); // Consumir nueva línea
+
+            switch (option) {
+                case 1:
+                    mostrarUsuarios(); // Muestra la lista de usuarios registrados
+                    break;
+                case 2:
+                    leerPalabras(); // Lee las palabras disponibles
+                    break;
+                case 3:
+                    editarPalabras(); // Llama al método para editar palabras
+                    break;
+                case 4:
+                    jugar(admin); // Permite al administrador jugar
+                    break;
+                case 5:
+                	System.out.println("Logout exitoso!");
+                    return; // Sale del bucle y regresa al menú principal
+                default:
+                    System.err.println("Opción inválida");
+                    break;
+            }
+        }
+    }
+    
     /**
      * Método que permite jugar adivinando palabras.
      */
-    private static void jugar() {
-        ArrayList<String> palabras = cargarPalabras(); // Cargar las palabras desde el archivo
+    public static void jugar(User user) {
+        ArrayList<WordScore> palabras = cargarPalabras(); // Cargar las palabras desde el archivo
         if (palabras.isEmpty()) {
             System.out.println("No hay palabras para jugar.");
             return;
         }
 
         // Elegir una palabra aleatoria
-        String palabraSeleccionada = palabras.get((int) (Math.random() * palabras.size()));
-        StringBuilder adivinadas = new StringBuilder("_".repeat(palabraSeleccionada.length()));
+        WordScore palabraSeleccionada = palabras.get((int) (Math.random() * palabras.size()));
+        StringBuilder adivinadas = new StringBuilder("_".repeat(palabraSeleccionada.getWord().length()));
+        int puntos = 0;
 
         System.out.println("Adivina la palabra: " + adivinadas);
 
         // Comenzar el juego
-        while (!adivinadas.toString().equals(palabraSeleccionada)) {
+        while (!adivinadas.toString().equals(palabraSeleccionada.getWord())) {
             System.out.print("Introduce una letra: ");
             String letra = sc.next();
 
             // Verificar si la letra está en la palabra
             boolean acerto = false;
-            for (int i = 0; i < palabraSeleccionada.length(); i++) {
-                if (palabraSeleccionada.charAt(i) == letra.charAt(0)) {
+            for (int i = 0; i < palabraSeleccionada.getWord().length(); i++) {
+                if (palabraSeleccionada.getWord().charAt(i) == letra.charAt(0)) {
                     adivinadas.setCharAt(i, letra.charAt(0));
                     acerto = true;
                 }
@@ -287,51 +279,65 @@ public class main {
 
             if (acerto) {
                 System.out.println("¡Correcto! Adivina la palabra: " + adivinadas);
+                puntos+=palabraSeleccionada.getPoints(); //Añadir puntos
             } else {
                 System.out.println("Incorrecto. Intenta de nuevo.");
+                puntos = puntos -(palabraSeleccionada.getPoints() - 5); //Resta 5 puntos si la letra no esta
             }
         }
 
-        System.out.println("¡Felicidades! Adivinaste la palabra: " + palabraSeleccionada);
+        System.out.println("¡Felicidades! Adivinaste la palabra: " + palabraSeleccionada.getWord() + " ");
+        System.out.println("Tu puntuacion es: " + puntos);
+        user.setPunts(user.getPunts() + puntos);
+    }
+ 
+    public static void leerPalabras() {
+        ArrayList<WordScore> palabras = cargarPalabras(); // Cargar las palabras desde el archivo
+        if (palabras.isEmpty()) {
+            System.out.println("No hay palabras registradas.");
+        } else {
+            System.out.println("Palabras registradas:");
+            for (WordScore ws : palabras) {
+                System.out.println("Palabra: " + ws.getWord() + ", Puntuación: " + ws.getPoints());
+            }
+        }
     }
     
-    /**
-     * Método que permite al administrador agregar nuevas palabras al juego.
-     */
-    private static void afegirParaules() {
-        System.out.println("Palabras actuales:");
-        ArrayList<String> palabras = cargarPalabras(); // Cargar palabras actuales
-        for (String palabra : palabras) {
-            System.out.println(palabra); // Muestra las palabras actuales
+    public static ArrayList<WordScore> cargarPalabras() {
+        ArrayList<WordScore> palabras = new ArrayList<>();
+        
+     // Verifica si el archivo existe, si no, lo crea
+        File archivo = new File("palabras.dat");
+        if (!archivo.exists()) {
+            try {
+                archivo.createNewFile(); // Crea el archivo si no existe
+            } catch (IOException e) {
+                System.err.println("Error al crear el archivo: " + e.getMessage());
+                return palabras; // Devuelve la lista vacía si no se pudo crear el archivo
+            }
         }
 
-        System.out.println("Introduce una nueva palabra: ");
-        String nuevaPalabra = sc.nextLine();
-        palabras.add(nuevaPalabra);
-        guardarPalabras(palabras); // Guarda la lista actualizada
-        System.out.println("Palabra añadida correctamente!");
-    }
-    
-    /**
-     * Método que carga palabras desde el archivo.
-     *
-     * @return Lista de palabras cargadas.
-     */
-    private static ArrayList<String> cargarPalabras() {
-        ArrayList<String> palabras = new ArrayList<>();
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("paraules.dat"))) {
-            while (true) {
-                String palabra = (String) ois.readObject(); // Leer la palabra
-                palabras.add(palabra); // Agregar a la lista
+        try (RandomAccessFile raf = new RandomAccessFile("palabras.dat", "r")) {
+            while (raf.getFilePointer() < raf.length()) {
+            	
+            	//"raf.getFilePointer()" devuelve la posicion actual del puntero en el archivo raf.
+            	//"raf.length()" devuelve la longitud actual del archivo en bytes
+            	
+                byte[] wordBytes = new byte[WORD_SIZE]; //un array de bytes del tamaño de la palabra
+                raf.read(wordBytes);//lee word_size bytes del archivo y los almacena en wordBytes.
+                String word = new String(wordBytes).trim();
+                /*Un nuevo String apartir de wordbytes que convierte la aaray de bytes en String
+                 *trim es para eliminar los espacios en blanco que pueden estar al principio o al final
+                 * 
+                 */
+                
+                int score = raf.readInt();
+                palabras.add(new WordScore(word, score));
             }
-        } catch (EOFException e) {
-            
         } catch (IOException e) {
-            System.err.println(e); 
-        } catch (ClassNotFoundException e) {
             System.err.println(e);
         }
-        return palabras;
+        return palabras; // Devuelve la lista de palabras
     }
 
     /**
@@ -339,17 +345,66 @@ public class main {
      *
      * @param palabras La lista de palabras a guardar.
      */
-    private static void guardarPalabras(ArrayList<String> palabras) {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("paraules.dat"))) {
-            for (String palabra : palabras) {
-                oos.writeObject(palabra); // Escribir cada palabra en el archivo
+    public static void editarPalabras() {
+    	ArrayList<WordScore> palabras = cargarPalabras();
+    	for(int i = 0; i < palabras.size();i ++){
+    		System.out.println((i+1) + ". " + palabras.get(i).getWord() + " - " + palabras.get(i).getPoints());
+    	}
+    	
+    	  System.out.println("Introduce el número de la palabra que deseas editar o 'N' para añadir una nueva palabra:");
+    	  System.out.print("Elige una opción: ");
+    	  String option = sc.nextLine();
+    	  
+    	  if(option.equalsIgnoreCase("N")){
+    		  System.out.println("Introduce la nueva palabra: ");
+    		  String nuevaPalabra = sc.nextLine();
+    		  System.out.println("Introduce la nueva puntuacion: ");
+    		  int nuevaPuntuacion = sc.nextInt();
+    		  sc.nextLine();
+    		  
+    		  palabras.add(new WordScore(nuevaPalabra, nuevaPuntuacion));
+    		  guardarPalabras(palabras); // Guarda las palabras actualizadas
+    	  }else {
+    		    int indice = Integer.parseInt(option) - 1;
+    		    if (indice >= 0 && indice < palabras.size()) {
+    		        System.out.print("Introduce la nueva palabra: ");
+    		        String nuevaPalabra = sc.nextLine();
+    		        System.out.print("Introduce la nueva puntuación: ");
+    		        int nuevaPuntuacion = sc.nextInt();
+    		        sc.nextLine();
+
+    		        palabras.get(indice).setWord(nuevaPalabra);
+    		        palabras.get(indice).setPoints(nuevaPuntuacion);
+    		    }else {
+    		    	System.err.println("Opcion Invalida");
+    		    }
+    	  }
+    	  
+    }
+    
+ // Método para guardar las palabras en el archivo
+    public static void guardarPalabras(ArrayList<WordScore> palabras) {
+        try (RandomAccessFile raf = new RandomAccessFile("palabras.dat", "rw")) {
+            for (WordScore ws : palabras) {
+                String paddedWord = String.format("%-" + WORD_SIZE + "s", ws.getWord());
+                
+                /*%-Indica que la palabra estara alineada a la izquierda 
+                 * "WORD_SIZE" indica que la palabra ocupa 50 caracteres.
+                 */
+                
+                raf.write(paddedWord.getBytes());//Escribe la palabra en forma de bytes donde apunta el puntero en el archivo
+                raf.writeInt(ws.getPoints());
             }
+            System.out.println("Palabras guardadas correctamente!");
         } catch (IOException e) {
-            System.err.println(e); 
+            System.err.println("Error al guardar las palabras: " + e.getMessage());
         }
     }
+       
+        
+    
 }
-	
+
 	
 	
 
