@@ -25,6 +25,13 @@ public class main {
     private static final int WORD_SIZE = 50; // Tamaño de la palabra en bytes
     private static final int SCORE_SIZE = 4; // Tamaño del entero de la puntuación
     private static final int RECORD_SIZE = WORD_SIZE + SCORE_SIZE; // Tamaño total del registro
+    
+    private static final int NAME_SIZE = 20;
+    private static final int USERNAME_SIZE = 20;
+    private static final int PASSWORD_SIZE = 20;
+    private static final int BOOLEAN_SIZE = 1;
+    private static final int INT_SIZE = 4;
+    private static final int USER_RECORD_SIZE = NAME_SIZE + USERNAME_SIZE + PASSWORD_SIZE + BOOLEAN_SIZE + INT_SIZE;
 
     /**
      * Método principal que inicia la aplicación.
@@ -125,17 +132,34 @@ public class main {
      */
     public static void guardarUsuari(User user) {
         ArrayList<User> users = cargarUsuarios(); // Cargar usuarios existentes
-        users.add(user); // Agrega el nuevo usuario a la lista
+        
+        // Buscar si el usuario ya existe
+        boolean userExists = false;
+        for (int i = 0; i < users.size(); i++) {
+            if (users.get(i).getUser().equals(user.getUser())) {
+                // Si el usuario existe, actualiza sus datos
+                users.set(i, user);
+                userExists = true;
+                break; // Salir del bucle una vez actualizado
+            }
+        }
+        
+        // Si el usuario no existe, se agrega el nuevo usuario
+        if (!userExists) {
+            users.add(user);
+        }
+        
+        // Guardar todos los usuarios nuevamente en el archivo
         try (ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream("users.dat"))) {
             for (User u : users) {
-                writer.writeObject(u); // Escribir todos los usuarios de nuevo
+                writer.writeObject(u); // Escribir todos los usuarios en el archivo
             }
             System.out.println("Usuario guardado correctamente!");
         } catch (IOException ex) {
             System.err.println(ex);
         }
     }
-
+    
     /**
      * Método que carga todos los usuarios desde el archivo.
      *
@@ -293,8 +317,7 @@ public class main {
                 if(adivinadas.toString().equals(palabraSeleccionada.getWord())) {
                 	System.out.println("¡Felicidades! Has adivinado la palabra: " + palabraSeleccionada.getWord() + " ");
                 	user.setPunts(user.getPunts() + palabraSeleccionada.getPoints());
-                	
-                	
+                           	
                 }
 
             } else {
@@ -306,18 +329,20 @@ public class main {
             	System.out.println("Se han acabado tus intentos!");
             	user.setPunts(user.getPunts() - restaPunts);
             	if(user.getPunts()<0) {
-            		System.out.println("Tus puntos: 0");
-            	}else {
-            		System.out.println("Tus puntos: " + user.getPunts());
+            		 user.setPunts(0);
             	}
-            return;
+            	
+            	System.out.println("Tus puntos: " + user.getPunts());
+                guardarUsuari(user);
+            	return;
+
             }
             
         }
 
         
         System.out.println("Tu puntuacion es: " + user.getPunts());
-    
+        guardarUsuari(user);
     }
  
     public static void leerPalabras() {
