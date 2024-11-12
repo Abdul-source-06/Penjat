@@ -23,7 +23,7 @@ public class main {
     
     static Scanner sc = new Scanner(System.in);
     private static final int WORD_SIZE = 50; // Tamaño de la palabra en bytes
-    private static final int SCORE_SIZE = 8; // Tamaño del entero de la puntuación
+    private static final int SCORE_SIZE = 4; // Tamaño del entero de la puntuación
     private static final int RECORD_SIZE = WORD_SIZE + SCORE_SIZE; // Tamaño total del registro
 
     /**
@@ -43,6 +43,10 @@ public class main {
             System.out.println("1. Login");
             System.out.println("2. Register");
             System.out.print("Choose a option: ");
+            while(!sc.hasNextInt()) {
+            	System.err.println("Opcion invalida, introduce un numero: ");
+            	sc.next();
+            }
             int option = sc.nextInt();
             sc.nextLine(); // Consumir nueva línea
 
@@ -180,7 +184,7 @@ public class main {
         } else {
             System.out.println("Usuarios registrados:");
             for (User user : users) {
-                System.out.println("Nombre: " + user.getName() + ", Username: " + user.getUser());
+                System.out.println("Nombre: " + user.getName() + " Username: " + user.getUser() + " Punts: " + user.getPunts());
             }
         }
     }
@@ -220,6 +224,11 @@ public class main {
             System.out.println("4. Jugar");
             System.out.println("5. Logout");
             System.out.print("Elige una opción: ");
+            while(!sc.hasNextInt()) {
+            	System.err.println("Opcion invalida, introduce un numero: ");
+            	sc.next();
+            }
+            	
             int option = sc.nextInt();
             sc.nextLine(); // Consumir nueva línea
 
@@ -260,14 +269,16 @@ public class main {
         WordScore palabraSeleccionada = palabras.get((int) (Math.random() * palabras.size()));
         StringBuilder adivinadas = new StringBuilder("_".repeat(palabraSeleccionada.getWord().length()));
         int puntos = 0;
-
+        int restaPunts = 5;
+        int intentos = 5;
         System.out.println("Adivina la palabra: " + adivinadas);
 
         // Comenzar el juego
         while (!adivinadas.toString().equals(palabraSeleccionada.getWord())) {
+        	System.out.println("Tienes " + intentos + " intentos");
             System.out.print("Introduce una letra: ");
             String letra = sc.next();
-
+            
             // Verificar si la letra está en la palabra
             boolean acerto = false;
             for (int i = 0; i < palabraSeleccionada.getWord().length(); i++) {
@@ -278,17 +289,35 @@ public class main {
             }
 
             if (acerto) {
-                System.out.println("¡Correcto! Adivina la palabra: " + adivinadas);
-                puntos+=palabraSeleccionada.getPoints(); //Añadir puntos
+                System.out.println("¡Correcto! Has adivinado la letra: " + adivinadas);
+                if(adivinadas.toString().equals(palabraSeleccionada.getWord())) {
+                	System.out.println("¡Felicidades! Has adivinado la palabra: " + palabraSeleccionada.getWord() + " ");
+                	user.setPunts(user.getPunts() + palabraSeleccionada.getPoints());
+                	
+                	
+                }
+
             } else {
-                System.out.println("Incorrecto. Intenta de nuevo.");
-                puntos = puntos -(palabraSeleccionada.getPoints() - 5); //Resta 5 puntos si la letra no esta
+                System.out.println("Incorrecto. Intenta de nuevo."); 
+                intentos--;
             }
+            
+            if(intentos == 0) {
+            	System.out.println("Se han acabado tus intentos!");
+            	user.setPunts(user.getPunts() - restaPunts);
+            	if(user.getPunts()<0) {
+            		System.out.println("Tus puntos: 0");
+            	}else {
+            		System.out.println("Tus puntos: " + user.getPunts());
+            	}
+            return;
+            }
+            
         }
 
-        System.out.println("¡Felicidades! Adivinaste la palabra: " + palabraSeleccionada.getWord() + " ");
-        System.out.println("Tu puntuacion es: " + puntos);
-        user.setPunts(user.getPunts() + puntos);
+        
+        System.out.println("Tu puntuacion es: " + user.getPunts());
+    
     }
  
     public static void leerPalabras() {
@@ -375,6 +404,7 @@ public class main {
 
     		        palabras.get(indice).setWord(nuevaPalabra);
     		        palabras.get(indice).setPoints(nuevaPuntuacion);
+    		        guardarPalabras(palabras);
     		    }else {
     		    	System.err.println("Opcion Invalida");
     		    }
